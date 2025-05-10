@@ -1,0 +1,79 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f5f5f5;
+  color: #333;
+}
+.App {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+header h1 {
+  text-align: center;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.sync-section {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+.sync-button {
+  background-color: #007bff;
+  color: white;
+  font-size: 1rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sync-button:disabled {
+  background-color: #7ba7d9;
+  cursor: not-allowed;
+}
+.error-msg {
+  color: red;
+}
+.hint {
+  text-align: center;
+  font-style: italic;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 2rem;
+  background: white;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+  text-align: left;
+}
+th {
+  background: #e9ecef;
+}
+.charts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+.chart {
+  width: 100%;
+  max-width: 700px;
+}
+.chart canvas {
+  max-width: 100%;
+}
+.tax-info {
+  background: #fff;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.tax-info h3 {
+  margin-top: 0;
+}
