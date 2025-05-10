@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Tableau de bord du Portefeuille</h1>
+{% if data is not defined or not data %}
+<p class="text-gray-400">Aucune donnée à afficher. Cliquez sur "Synchroniser" pour récupérer les données du portefeuille Binance.</p>
+{% else %}
+<!-- Indicateurs principaux -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-sm text-gray-400">Valeur actuelle</h2>
+        <p class="text-xl font-semibold">{{ data.valeur_actuelle | round(2) }} USDC</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-sm text-gray-400">Capital investi</h2>
+        <p class="text-xl font-semibold">{{ data.capital_investi | round(2) }} USDC</p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-sm text-gray-400">Plus-value réalisée</h2>
+        <p class="text-xl font-semibold {% if data.pl_realise >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+            {{ data.pl_realise | round(2) }} USDC
+        </p>
+    </div>
+    <div class="bg-gray-800 p-4 rounded">
+        <h2 class="text-sm text-gray-400">Plus-value latente</h2>
+        <p class="text-xl font-semibold {% if data.pl_latent >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+            {{ data.pl_latent | round(2) }} USDC
+        </p>
+    </div>
+</div>
+<!-- Positions ouvertes -->
+<h2 class="text-xl font-semibold mb-3">Positions Ouvertes</h2>
+{% if data.open_positions %}
+<div class="overflow-x-auto mb-8">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-700 text-gray-300">
+        <tr>
+            <th class="py-2 px-4 text-left">Actif</th>
+            <th class="py-2 px-4 text-right">Quantité</th>
+            <th class="py-2 px-4 text-right">Prix moyen</th>
+            <th class="py-2 px-4 text-right">Prix actuel</th>
+            <th class="py-2 px-4 text-right">P/L latente</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for pos in data.open_positions %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2 px-4">{{ pos.asset }}</td>
+            <td class="py-2 px-4 text-right">{{ pos.quantity | round(6) }}</td>
+            <td class="py-2 px-4 text-right">{{ pos.avg_price | round(4) }} USDC</td>
+            <td class="py-2 px-4 text-right">{{ pos.current_price | round(4) }} USDC</td>
+            <td class="py-2 px-4 text-right
+                  {% if pos.pl_latent >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                {{ pos.pl_latent | round(2) }} USDC
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-gray-400 mb-8">Aucune position ouverte.</p>
+{% endif %}
+<!-- Positions fermées -->
+<h2 class="text-xl font-semibold mb-3">Positions Fermées</h2>
+{% if data.closed_positions %}
+<div class="overflow-x-auto mb-4">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-700 text-gray-300">
+        <tr>
+            <th class="py-2 px-4 text-left">Actif</th>
+            <th class="py-2 px-4 text-right">P/L réalisé</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for pos in data.closed_positions %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2 px-4">{{ pos.asset }}</td>
+            <td class="py-2 px-4 text-right {% if pos.pl_realise >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
+                {{ pos.pl_realise | round(2) }} USDC
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-gray-400">Aucune position fermée pour le moment.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

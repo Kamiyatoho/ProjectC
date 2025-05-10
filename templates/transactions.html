@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Historique des Transactions</h1>
+{% if not data or (data.deposits|length == 0 and data.trades|length == 0 and data.conversions|length == 0) %}
+<p class="text-gray-400">Aucune transaction à afficher.</p>
+{% else %}
+<!-- Table des Dépôts -->
+<h2 class="text-xl font-semibold mb-3">Dépôts</h2>
+{% if data.deposits and data.deposits|length > 0 %}
+<div class="overflow-x-auto mb-6">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-700 text-gray-300">
+        <tr>
+            <th class="py-2 px-4 text-left">Actif</th>
+            <th class="py-2 px-4 text-right">Montant</th>
+            <th class="py-2 px-4 text-right">Date</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for dep in data.deposits %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2 px-4">{{ dep.asset }}</td>
+            <td class="py-2 px-4 text-right">{{ dep.amount | round(6) }}</td>
+            <td class="py-2 px-4 text-right">
+                {{ dep.time | datetimeformat }}
+                {# On suppose qu'un filtre custom datetimeformat est défini,
+                sinon on peut afficher timestamp brut ou formater en python #}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-gray-400 mb-6">Aucun dépôt enregistré.</p>
+{% endif %}
+<!-- Table des Trades -->
+<h2 class="text-xl font-semibold mb-3">Trades</h2>
+{% if data.trades and data.trades|length > 0 %}
+<div class="overflow-x-auto mb-6">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-700 text-gray-300">
+        <tr>
+            <th class="py-2 px-4 text-left">Symbole</th>
+            <th class="py-2 px-4 text-right">Type</th>
+            <th class="py-2 px-4 text-right">Quantité</th>
+            <th class="py-2 px-4 text-right">Prix</th>
+            <th class="py-2 px-4 text-right">Montant</th>
+            <th class="py-2 px-4 text-right">Commission</th>
+            <th class="py-2 px-4 text-right">Date</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for t in data.trades %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2 px-4">{{ t.symbol }}</td>
+            <td class="py-2 px-4 text-right">{{ t.isBuyer and 'ACHAT' or 'VENTE' }}</td>
+            <td class="py-2 px-4 text-right">{{ t.qty | round(6) }}</td>
+            <td class="py-2 px-4 text-right">{{ t.price | round(6) }}</td>
+            <td class="py-2 px-4 text-right">{{ t.quoteQty | round(6) }}</td>
+            <td class="py-2 px-4 text-right">
+                {{ t.commission | round(6) }} {{ t.commissionAsset }}
+            </td>
+            <td class="py-2 px-4 text-right">{{ t.time | datetimeformat }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-gray-400 mb-6">Aucun trade enregistré.</p>
+{% endif %}
+<!-- Table des Conversions -->
+<h2 class="text-xl font-semibold mb-3">Conversions</h2>
+{% if data.conversions and data.conversions|length > 0 %}
+<div class="overflow-x-auto mb-4">
+    <table class="min-w-full text-sm">
+        <thead class="bg-gray-700 text-gray-300">
+        <tr>
+            <th class="py-2 px-4 text-left">Depuis</th>
+            <th class="py-2 px-4 text-left">Vers</th>
+            <th class="py-2 px-4 text-right">Montant (source)</th>
+            <th class="py-2 px-4 text-right">Montant (cible)</th>
+            <th class="py-2 px-4 text-right">Date</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for c in data.conversions %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2 px-4">{{ c.fromAsset }}</td>
+            <td class="py-2 px-4">{{ c.toAsset }}</td>
+            <td class="py-2 px-4 text-right">{{ c.fromAmount | round(6) }}</td>
+            <td class="py-2 px-4 text-right">{{ c.toAmount | round(6) }}</td>
+            <td class="py-2 px-4 text-right">{{ c.time | datetimeformat }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-gray-400 mb-4">Aucune conversion enregistrée.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

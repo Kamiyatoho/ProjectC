@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portefeuille Binance - Dashboard</title>
+    <!-- Intégration de Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Forcer le mode sombre par défaut */
+        html.dark {
+            color-scheme: dark;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100">
+<!-- Barre de navigation -->
+<nav class="p-4 bg-gray-800 flex items-center justify-between">
+    <div class="text-lg font-semibold text-indigo-400">Binance Portfolio Tracker</div>
+    <div>
+        <a href="{{ url_for('dashboard.dashboard') }}" class="text-gray-300 hover:text-white mr-4">Dashboard</a>
+        <a href="{{ url_for('dashboard.transactions') }}" class="text-gray-300 hover:text-white mr-4">Transactions</a>
+        <!-- Bouton Synchroniser -->
+        <a href="{{ url_for('dashboard.sync') }}" class="bg-indigo-500 hover:bg-indigo-600 text-white py-1 px-3 rounded">Synchroniser</a>
+    </div>
+</nav>
+
+<!-- Contenu principal injecté ici par les templates enfants -->
+<main class="p-6">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="mb-4">
+        {% for category, message in messages %}
+        <div class="p-2 rounded text-sm
+                        {% if category == 'success' %}bg-green-600 text-green-100
+                        {% elif category == 'error' %}bg-red-600 text-red-100
+                        {% elif category == 'info' %}bg-blue-600 text-blue-100{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>
