@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Calcul des Impôts</h1>
+<form method="post" class="mb-6">
+    <label for="year" class="block text-gray-300 mb-1">Année :</label>
+    <input type="number" name="year" id="year" min="2000" max="2100" value="{{ year or '' }}"
+           class="p-2 rounded bg-gray-800 text-gray-200 mr-2">
+    <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white py-1 px-4 rounded">Calculer</button>
+</form>
+
+{% if result %}
+<div class="bg-gray-800 p-4 rounded">
+    <p>Montant investi en {{ result.year }} : <strong>{{ result.invested | round(2) }} USDC</strong></p>
+    <p>Capital non imposable : <strong>{{ result.capital_non_imposable | round(2) }} USDC</strong></p>
+    <p>Valeur actuelle du portefeuille : <strong>{{ result.total_value | round(2) }} USDC</strong></p>
+    <p>Excédent (= retrait - capital investi) : <strong>{{ result.excess | round(2) }} USDC</strong></p>
+    <p>Impôt (30% sur l’excédent) : <strong>{{ result.tax | round(2) }} USDC</strong></p>
+</div>
+{% endif %}
+{% endblock %}

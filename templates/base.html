@@ -1,47 +1,58 @@
+<!-- base.html -->
 <!DOCTYPE html>
 <html lang="fr" class="dark">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portefeuille Binance - Dashboard</title>
-    <!-- Intégration de Tailwind CSS via CDN -->
+
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        /* Forcer le mode sombre par défaut */
-        html.dark {
-            color-scheme: dark;
-        }
-    </style>
+
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.3.6/css/buttons.dataTables.min.css">
 </head>
 <body class="bg-gray-900 text-gray-100">
-<!-- Barre de navigation -->
+
+<!-- Navigation -->
 <nav class="p-4 bg-gray-800 flex items-center justify-between">
     <div class="text-lg font-semibold text-indigo-400">Binance Portfolio Tracker</div>
     <div>
         <a href="{{ url_for('dashboard.dashboard') }}" class="text-gray-300 hover:text-white mr-4">Dashboard</a>
         <a href="{{ url_for('dashboard.transactions') }}" class="text-gray-300 hover:text-white mr-4">Transactions</a>
-        <!-- Bouton Synchroniser -->
+        <a href="{{ url_for('dashboard.impots') }}" class="text-gray-300 hover:text-white mr-4">Impôts</a>
         <a href="{{ url_for('dashboard.sync') }}" class="bg-indigo-500 hover:bg-indigo-600 text-white py-1 px-3 rounded">Synchroniser</a>
     </div>
 </nav>
 
-<!-- Contenu principal injecté ici par les templates enfants -->
 <main class="p-6">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="mb-4">
         {% for category, message in messages %}
         <div class="p-2 rounded text-sm
-                        {% if category == 'success' %}bg-green-600 text-green-100
-                        {% elif category == 'error' %}bg-red-600 text-red-100
-                        {% elif category == 'info' %}bg-blue-600 text-blue-100{% endif %}">
+                    {% if category == 'success' %}bg-green-600 text-green-100
+                    {% elif category == 'error' %}bg-red-600 text-red-100
+                    {% elif category == 'info' %}bg-blue-600 text-blue-100{% endif %}">
             {{ message }}
         </div>
         {% endfor %}
     </div>
     {% endif %}
     {% endwith %}
+
     {% block content %}{% endblock %}
 </main>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
+
+{% block extra_scripts %}{% endblock %}
+
 </body>
 </html>
