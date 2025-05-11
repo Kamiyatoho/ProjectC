@@ -367,7 +367,6 @@ def sync_data() -> dict:
                     avg_cost_fee = cost_basis.get(fee_asset, 0.0) / portfolio.get(fee_asset, 0.0)
                 cost_fee_total = avg_cost_fee * fee_amount
                 remove_holding(fee_asset, fee_amount, cost_fee_total)
-                realized_profit -= cost_fee_total
                 realized_by_asset[fee_asset] = realized_by_asset.get(fee_asset, 0.0) - cost_fee_total
 
         elif ev["type"] == "conversion":
@@ -392,7 +391,7 @@ def sync_data() -> dict:
             if to_asset in base_assets:
                 net_received = to_amount
                 profit = net_received - cost_spent_total
-                realized_profit += profit
+                #realized_profit += profit
                 realized_by_asset[from_asset] = realized_by_asset.get(from_asset, 0.0) + profit
                 add_holding(to_asset, net_received, cost_spent_total)
             else:
@@ -402,6 +401,8 @@ def sync_data() -> dict:
     # 3. Calcul de la valeur actuelle et P/L latent
     current_value = 0.0
     prices = {}
+    fake_usdc = portfolio.pop("USDC", 0.0)
+    prices.pop("USDC", None)
     for asset, qty in portfolio.items():
         if qty == 0:
             continue
@@ -444,6 +445,13 @@ def sync_data() -> dict:
                 "asset": asset,
                 "pl_realise": pl
             })
+
+    # Si il n'y as pas de fichier JSON alors affiche debug
+    if not os.path.exists("data/portfolio_data.json") or not os.path.exists("data/raw_data.json"):
+        print("DEBUG ➔ invested_capital =", invested_capital)
+        print("DEBUG ➔ usdc_balance    =", usdc_balance)
+        print("DEBUG ➔ realized_profit =", realized_profit)
+        print("DEBUG ➔ investi - usdc =", invested_capital - usdc_balance)
 
     # Rassemblement des résultats
     portfolio_data = {
