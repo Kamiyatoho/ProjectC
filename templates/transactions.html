@@ -3,10 +3,11 @@
 {% block content %}
 <h1 class="text-2xl font-bold mb-6">Historique des Transactions</h1>
 
-{% if not data or (data.deposits|length == 0 and data.trades|length == 0 and data.conversions|length == 0) %}
-<p class="text-gray-400">Aucune transaction à afficher.</p>
+{% if not data or (data.deposits|length == 0 and data.withdrawals|length == 0 and data.trades|length == 0 and data.conversions|length == 0) %}
+<p class="text-gray-400 italic">Aucune transaction à afficher.</p>
 {% else %}
 
+<!-- Dépôts -->
 <h2 class="text-xl font-semibold mb-3">Dépôts</h2>
 {% if data.deposits %}
 <div class="overflow-x-auto mb-6">
@@ -14,8 +15,9 @@
         <thead class="bg-gray-700 text-gray-300">
         <tr>
             <th>Actif</th>
-            <th>Montant</th>
-            <th>Date</th>
+            <th class="text-right">Montant</th>
+            <th class="text-right">Catégorie</th>  <!-- nouvelle colonne -->
+            <th class="text-right">Date</th>
         </tr>
         </thead>
         <tbody>
@@ -23,14 +25,45 @@
         <tr>
             <td>{{ dep.asset }}</td>
             <td class="text-right">{{ dep.amount | round(6) }}</td>
+            <td class="text-right">{{ dep.category }}</td>  <!-- affichage -->
             <td class="text-right">{{ dep.time | datetimeformat }}</td>
         </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
+{% else %}
+<p class="text-gray-400 italic mb-6">Aucune donnée de dépôts pour le moment.</p>
 {% endif %}
 
+<!-- Retraits -->
+<h2 class="text-xl font-semibold mb-3">Retraits</h2>
+{% if data.withdrawals %}
+<div class="overflow-x-auto mb-6">
+    <table id="withdrawals-table" class="stripe hover min-w-full text-sm">
+        <thead class="bg-gray-700 text-gray-300">
+        <tr>
+            <th>Actif</th>
+            <th class="text-right">Montant</th>
+            <th class="text-right">Date</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for wd in data.withdrawals %}
+        <tr>
+            <td>{{ wd.asset }}</td>
+            <td class="text-right">{{ wd.amount | round(6) }}</td>
+            <td class="text-right">{{ wd.time | datetimeformat }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p class="text-gray-400 italic mb-6">Aucune donnée de retraits pour le moment.</p>
+{% endif %}
+
+<!-- Trades -->
 <h2 class="text-xl font-semibold mb-3">Trades</h2>
 {% if data.trades %}
 <div class="overflow-x-auto mb-6">
@@ -61,19 +94,22 @@
         </tbody>
     </table>
 </div>
+{% else %}
+<p class="text-gray-400 italic mb-6">Aucune donnée de trades pour le moment.</p>
 {% endif %}
 
+<!-- Conversions -->
 <h2 class="text-xl font-semibold mb-3">Conversions</h2>
 {% if data.conversions %}
-<div class="overflow-x-auto mb-4">
+<div class="overflow-x-auto mb-6">
     <table id="conversions-table" class="stripe hover min-w-full text-sm">
         <thead class="bg-gray-700 text-gray-300">
         <tr>
             <th>Depuis</th>
             <th>Vers</th>
-            <th>Montant (source)</th>
-            <th>Montant (cible)</th>
-            <th>Date</th>
+            <th class="text-right">Montant (source)</th>
+            <th class="text-right">Montant (cible)</th>
+            <th class="text-right">Date</th>
         </tr>
         </thead>
         <tbody>
@@ -89,15 +125,24 @@
         </tbody>
     </table>
 </div>
+{% else %}
+<p class="text-gray-400 italic mb-6">Aucune donnée de conversions pour le moment.</p>
 {% endif %}
+
 {% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
     $(document).ready(function() {
-        ['#deposits-table', '#trades-table', '#conversions-table'].forEach(function(selector) {
-            if (!$.fn.DataTable.isDataTable(selector)) {
+        const tables = [
+            '#deposits-table',
+            '#withdrawals-table',
+            '#trades-table',
+            '#conversions-table'
+        ];
+        tables.forEach(function(selector) {
+            if ($(selector).length && !$.fn.DataTable.isDataTable(selector)) {
                 $(selector).DataTable({
                     paging: true,
                     pageLength: 15,
@@ -113,14 +158,8 @@
           <'flex justify-between items-center mt-4'ip>
         `,
                     buttons: [
-                        {
-                            extend: 'csvHtml5',
-                            text: 'Exporter CSV',
-                        },
-                        {
-                            extend: 'excelHtml5',
-                            text: 'Exporter Excel',
-                        }
+                        { extend: 'csvHtml5', text: 'Exporter CSV' },
+                        { extend: 'excelHtml5', text: 'Exporter Excel' }
                     ]
                 });
             }
