@@ -364,12 +364,17 @@ def sync_data() -> dict:
             to_amount = ev["toAmount"]
             # Calcul du coût moyen de l'actif source
             avg_cost_from = 0.0
-            if portfolio.get(from_asset, 0.0) > 0:
-                total_cost_from = cost_basis.get(from_asset, 0.0)
+            if from_asset in base_assets:
+                # Stablecoins / fiat : coût 1:1
+                cost_spent_total = from_amount
+            else:
+                # Crypto : on utilise le coût moyen historique
+                avg_cost_from = 0.0
                 total_qty_from = portfolio.get(from_asset, 0.0)
                 if total_qty_from > 0:
+                    total_cost_from = cost_basis.get(from_asset, 0.0)
                     avg_cost_from = total_cost_from / total_qty_from
-            cost_spent_total = avg_cost_from * from_amount
+                cost_spent_total = avg_cost_from * from_amount
             remove_holding(from_asset, from_amount, cost_spent_total)
             if to_asset in base_assets:
                 net_received = to_amount
