@@ -18,19 +18,20 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in">
             <h2 class="text-sm text-gray-400">Montant investi en <span id="displayYear">{{ current_year }}</span></h2>
-            <p class="text-xl font-semibold mt-2"><span id="investedAmount">0</span> USDC</p>
+            <p class="text-xl font-semibold mt-2"><span id="investedAmount">0.00</span> USDC</p>
         </div>
         <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in" data-aos-delay="100">
-            <h2 class="text-sm text-gray-400">Capital non imposable</h2>
-            <p class="text-xl font-semibold mt-2"><span id="nonTaxable">0</span> USDC</p>
+            <h2 class="text-sm text-gray-400">Retrait total en <span id="displayYear2">{{ current_year }}</span></h2>
+            <p class="text-xl font-semibold mt-2"><span id="withdrawalAmount">0.00</span> USDC</p>
+            <p id="imposableNote" class="text-sm text-red-400 mt-1 hidden"></p>
         </div>
         <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in" data-aos-delay="200">
             <h2 class="text-sm text-gray-400">Valeur actuelle du portefeuille</h2>
-            <p class="text-xl font-semibold mt-2"><span id="currentValue">0</span> USDC</p>
+            <p class="text-xl font-semibold mt-2"><span id="currentValue">0.00</span> USDC</p>
         </div>
         <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in" data-aos-delay="300">
-            <h2 class="text-sm text-gray-400">Impôt estimé</h2>
-            <p class="text-xl font-semibold mt-2"><span id="taxAmount">0</span> USDC</p>
+            <h2 class="text-sm text-gray-400">Impôt estimé en <span id="displayYear3">{{ current_year }}</span></h2>
+            <p class="text-xl font-semibold mt-2"><span id="taxAmount">0.00</span> USDC</p>
         </div>
     </div>
 
@@ -46,22 +47,75 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    // Animation de comptage
+    function animateValue(id, start, end, duration) {
+        const range = end - start;
+        let startTime = null;
+        function step(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            const value = start + range * progress;
+            document.getElementById(id).textContent = value.toFixed(2);
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        }
+        window.requestAnimationFrame(step);
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('depositWithdrawChart').getContext('2d');
         let chart;
+
+        function renderChart(labels, deposits, withdrawals) {
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { label: 'Dépôts', data: deposits, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                        { label: 'Retraits', data: withdrawals, backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    animation: { duration: 1000, easing: 'easeOutQuart' },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
 
         function updateData(year) {
             fetch(`/api/taxes?year=${year}`)
                 .then(res => res.json())
                 .then(data => {
-                    // Met à jour les chiffres
+                    // Mise à jour des années
                     document.getElementById('displayYear').textContent = year;
-                    document.getElementById('investedAmount').textContent = data.totalDeposit;
-                    document.getElementById('nonTaxable').textContent = data.nonTaxable;
-                    document.getElementById('currentValue').textContent = data.currentValue;
-                    document.getElementById('taxAmount').textContent = data.tax;
+                    document.getElementById('displayYear2').textContent = year;
+                    document.getElementById('displayYear3').textContent = year;
 
-                    // Met à jour le graphique
+                    const totalDeposit = parseFloat(data.totalDeposit);
+                    const totalWithdrawal = data.withdrawals.reduce((sum, v) => sum + v, 0);
+                    const currentValue = parseFloat(data.currentValue);
+                    const taxValue = parseFloat(data.tax);
+
+                    // Animation des chiffres
+                    animateValue('investedAmount', 0, totalDeposit, 1000);
+                    animateValue('withdrawalAmount', 0, totalWithdrawal, 1500);
+                    animateValue('currentValue', 0, currentValue, 2000);
+                    animateValue('taxAmount', 0, taxValue, 3000);
+
+                    // Note imposable si applicable
+                    const noteEl = document.getElementById('imposableNote');
+                    const excess = totalWithdrawal - totalDeposit;
+                    if (excess > 0) {
+                        noteEl.textContent = `(dont ${excess.toFixed(2)} USDC imposable)`;
+                        noteEl.classList.remove('hidden');
+                    } else {
+                        noteEl.classList.add('hidden');
+                    }
+
+                    // Graphique
                     const labels = data.months;
                     const deposits = data.deposits;
                     const withdrawals = data.withdrawals;
@@ -72,24 +126,13 @@
                         chart.data.datasets[1].data = withdrawals;
                         chart.update();
                     } else {
-                        chart = new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels,
-                                datasets: [
-                                    { label: 'Dépôts', data: deposits, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                                    { label: 'Retraits', data: withdrawals, backgroundColor: 'rgba(255, 99, 132, 0.7)' }
-                                ]
-                            },
-                            options: { responsive: true, scales: { y: { beginAtZero: true } } }
-                        });
+                        renderChart(labels, deposits, withdrawals);
                     }
                 });
         }
 
         // Événement changement d'année
-        document.getElementById('yearSelect')
-            .addEventListener('change', e => updateData(e.target.value));
+        document.getElementById('yearSelect').addEventListener('change', e => updateData(e.target.value));
 
         // Chargement initial
         updateData({{ current_year }});
