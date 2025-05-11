@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="text-2xl font-bold mb-6">Tableau de bord du Portefeuille</h1>
+<h1 class="text-2xl font-bold mb-6" data-aos="fade-down">Tableau de bord du Portefeuille</h1>
 
 {% if data is not defined or not data %}
 <p class="text-gray-400">
@@ -8,44 +8,44 @@
 </p>
 {% else %}
 <!-- Indicateurs principaux -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
-    <div class="bg-gray-800 p-4 rounded">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8" data-aos="fade-up" data-aos-delay="100">
+    <div class="bg-gray-800 p-4 rounded" data-aos="zoom-in" data-aos-delay="200">
         <h2 class="text-sm text-gray-400">Valeur actuelle</h2>
         <p class="text-xl font-semibold">{{ data.valeur_actuelle | round(2) }} USDC</p>
     </div>
-    <div class="bg-gray-800 p-4 rounded">
+    <div class="bg-gray-800 p-4 rounded" data-aos="zoom-in" data-aos-delay="200">
         <h2 class="text-sm text-gray-400">Capital investi</h2>
         <p class="text-xl font-semibold">{{ data.capital_investi | round(2) }} USDC</p>
     </div>
-    <div class="bg-gray-800 p-4 rounded">
+    <div class="bg-gray-800 p-4 rounded" data-aos="zoom-in" data-aos-delay="200">
         <h2 class="text-sm text-gray-400">Plus-value réalisée</h2>
         <p class="text-xl font-semibold {% if data.pl_realise >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
             {{ data.pl_realise | round(2) }} USDC
         </p>
     </div>
-    <div class="bg-gray-800 p-4 rounded">
+    <div class="bg-gray-800 p-4 rounded" data-aos="zoom-in" data-aos-delay="200">
         <h2 class="text-sm text-gray-400">Plus-value latente</h2>
         <p class="text-xl font-semibold {% if data.pl_latent >= 0 %}text-green-400{% else %}text-red-400{% endif %}">
             {{ data.pl_latent | round(2) }} USDC
         </p>
     </div>
-    <div class="bg-gray-800 p-4 rounded">
+    <div class="bg-gray-800 p-4 rounded" data-aos="zoom-in" data-aos-delay="200">
         <h2 class="text-sm text-gray-400">Solde USDC disponible</h2>
         <p class="text-xl font-semibold">{{ data.solde_usdc | round(2) }} USDC</p>
     </div>
 </div>
 
-<!-- PnL toggle -->
+<!-- PnL toggle
 <div class="mb-4">
     <button id="togglePnL" class="bg-indigo-500 hover:bg-indigo-600 text-white py-1 px-3 rounded">
         Afficher P/L en %
     </button>
-</div>
+</div> -->
 
 <!-- Positions ouvertes -->
-<h2 class="text-xl font-semibold mb-3">Positions Ouvertes</h2>
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Positions Ouvertes</h2>
 {% if data.open_positions %}
-<div class="overflow-x-auto mb-8">
+<div class="overflow-x-auto mb-8" data-aos="fade-up" data-aos-delay="50">
     <table id="open-positions-table" class="min-w-full text-sm">
         <thead class="bg-gray-700 text-gray-300">
         <tr>
@@ -80,9 +80,9 @@
 {% endif %}
 
 <!-- Positions fermées -->
-<h2 class="text-xl font-semibold mb-3">Positions Fermées</h2>
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Positions Fermées</h2>
 {% if data.closed_positions %}
-<div class="overflow-x-auto mb-4">
+<div class="overflow-x-auto mb-4" data-aos="fade-up" data-aos-delay="50">
     <table id="closed-positions-table" class="min-w-full text-sm">
         <thead class="bg-gray-700 text-gray-300">
         <tr>
@@ -102,8 +102,8 @@
         </tbody>
     </table>
 </div>
-<h2 class="text-xl font-semibold mb-3">Répartition des Positions Ouvertes</h2>
-<div class="bg-gray-800 p-4 rounded mb-8" style="max-width:600px; margin:0 auto; height:600px;">
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Répartition des Positions Ouvertes</h2>
+<div class="bg-gray-800 p-4 rounded mb-8" style="max-width:600px; margin:0 auto; height:600px;" data-aos="fade-up" data-aos-delay="50">
     <canvas id="assetPieChart"></canvas>
 </div>
 {% else %}

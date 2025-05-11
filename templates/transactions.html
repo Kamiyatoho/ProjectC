@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-6">Historique des Transactions</h1>
+<h1 class="text-2xl font-bold mb-6" data-aos="fade-down">Historique des Transactions</h1>
 
 {% if not data or (data.deposits|length == 0 and data.withdrawals|length == 0 and data.trades|length == 0 and data.conversions|length == 0) %}
 <p class="text-gray-400 italic">Aucune transaction à afficher.</p>
 {% else %}
 
 <!-- Dépôts -->
-<h2 class="text-xl font-semibold mb-3">Dépôts</h2>
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Dépôts</h2>
 {% if data.deposits %}
-<div class="overflow-x-auto mb-6">
+<div class="overflow-x-auto mb-6" data-aos="fade-up" data-aos-delay="50">
     <table id="deposits-table" class="stripe hover min-w-full text-sm">
         <thead class="bg-gray-700 text-gray-300">
         <tr>
@@ -37,9 +37,9 @@
 {% endif %}
 
 <!-- Retraits -->
-<h2 class="text-xl font-semibold mb-3">Retraits</h2>
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Retraits</h2>
 {% if data.withdrawals %}
-<div class="overflow-x-auto mb-6">
+<div class="overflow-x-auto mb-6" data-aos="fade-up" data-aos-delay="50">
     <table id="withdrawals-table" class="stripe hover min-w-full text-sm">
         <thead class="bg-gray-700 text-gray-300">
         <tr>
@@ -64,9 +64,9 @@
 {% endif %}
 
 <!-- Trades -->
-<h2 class="text-xl font-semibold mb-3">Trades</h2>
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Trades</h2>
 {% if data.trades %}
-<div class="overflow-x-auto mb-6">
+<div class="overflow-x-auto mb-6" data-aos="fade-up" data-aos-delay="50">
     <table id="trades-table" class="stripe hover min-w-full text-sm">
         <thead class="bg-gray-700 text-gray-300">
         <tr>
@@ -99,9 +99,9 @@
 {% endif %}
 
 <!-- Conversions -->
-<h2 class="text-xl font-semibold mb-3">Conversions</h2>
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Conversions</h2>
 {% if data.conversions %}
-<div class="overflow-x-auto mb-6">
+<div class="overflow-x-auto mb-6" data-aos="fade-up" data-aos-delay="50">
     <table id="conversions-table" class="stripe hover min-w-full text-sm">
         <thead class="bg-gray-700 text-gray-300">
         <tr>
