@@ -254,6 +254,22 @@ def sync_data() -> dict:
             add_holding(asset, amount, cost)
             # On ajoute le coût du dépôt crypto au capital investi
             invested_capital += cost
+    # Traitement des retraits (capital investi)
+    for w in withdrawals:
+        asset = w["asset"]
+        amount = w["amount"]
+        timestamp = w["time"]
+        if asset in base_assets:
+            # Stablecoin : coût 1:1
+            remove_holding(asset, amount, amount)
+            invested_capital -= amount
+        else:
+            # Crypto-retrait : récupérer le prix au moment du retrait
+            price_at_withdrawal = get_price_at(asset, timestamp)
+            cost = price_at_withdrawal * amount
+            remove_holding(asset, amount, cost)
+            # On soustrait le coût du retrait crypto du capital investi
+            invested_capital -= cost
 
     # Combiner trades et conversions chronologiquement
     events = []
