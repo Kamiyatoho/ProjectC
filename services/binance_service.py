@@ -218,152 +218,111 @@ def sync_data() -> dict:
         "trades": trade_list,
         "conversions": conversions
     }
-# 2. Calcul des positions et P/L
-    portfolio = {}
-    cost_basis = {}
-    invested_capital = 0.0
+    # 2. Initialisation des structures et compteurs
+    portfolio       = {}
+    cost_basis      = {}
+    invested_capital= 0.0
     realized_profit = 0.0
     realized_by_asset = {}
-    base_assets = ["USDC", "BUSD", "EUR", "USD"]
+    base_assets     = ["USDC", "BUSD", "EUR", "USD"]
 
-    def add_holding(asset, qty, cost):
-        portfolio[asset] = portfolio.get(asset, 0.0) + qty
-        cost_basis[asset] = cost_basis.get(asset, 0.0) + cost
+    # 3. Fonctions utilitaires
+    def add_holding(asset, quantity, cost):
+        portfolio[asset]   = portfolio.get(asset, 0.0) + quantity
+        cost_basis[asset]  = cost_basis.get(asset, 0.0) + cost
 
-    def remove_holding(asset, qty, cost):
-        portfolio[asset] = portfolio.get(asset, 0.0) - qty
-        cost_basis[asset] = cost_basis.get(asset, 0.0) - cost
-        if portfolio[asset] <= 1e-9:
-            portfolio[asset] = 0.0
-        if cost_basis.get(asset) is not None and abs(cost_basis[asset]) < 1e-9:
-            cost_basis[asset] = 0.0
+    def remove_holding(asset, quantity, cost):
+        if portfolio.get(asset, 0.0) < quantity:
+            print(f"⚠️ Alerte : pas assez de {asset} pour retirer {quantity}. Disponible : {portfolio.get(asset, 0.0)}")
+        portfolio[asset]  = max(portfolio.get(asset, 0.0) - quantity, 0.0)
+        cost_basis[asset] = max(cost_basis.get(asset, 0.0) - cost, 0.0)
 
-    # Traitement des dépôts (capital investi)
+    # 4. Traitement des dépôts (capital investi)
     for dep in deposits:
-        asset = dep["asset"]
-        amount = dep["amount"]
+        asset     = dep["asset"]
+        amount    = dep["amount"]
         timestamp = dep["time"]
         if asset in base_assets:
-            # Stablecoin : coût 1:1
             add_holding(asset, amount, amount)
             invested_capital += amount
         else:
-            # Crypto-dépôt : récupérer le prix au moment du dépôt
-            price_at_deposit = get_price_at(asset, timestamp)
-            cost = price_at_deposit * amount
+            price = get_price_at(asset, timestamp)
+            cost  = price * amount
             add_holding(asset, amount, cost)
-            # On ajoute le coût du dépôt crypto au capital investi
             invested_capital += cost
 
-    # Combiner trades et conversions chronologiquement
+    # 5. Fusion des trades + conversions en events
     events = []
     for t in trade_list:
+        is_buy      = t["isBuyer"]
+        base_asset  = t["symbol"][:-len(base_currency)]
+        quote_asset = base_currency
+        if is_buy:
+            frm_amt, to_amt = t["quoteQty"], t["qty"]
+            frm_asset, to_asset = quote_asset, base_asset
+        else:
+            frm_amt, to_amt = t["qty"], t["quoteQty"]
+            frm_asset, to_asset = base_asset, quote_asset
+
         events.append({
-            "type": "trade",
-            "symbol": t["symbol"],
-            "price": t["price"],
-            "qty": t["qty"],
-            "quoteQty": t["quoteQty"],
-            "commission": t.get("commission", 0.0),
-            "commissionAsset": t.get("commissionAsset"),
             "time": t["time"],
-            "isBuyer": t["isBuyer"]
+            "from": {"asset": frm_asset, "amount": frm_amt},
+            "to":   {"asset": to_asset,   "amount": to_amt},
+            "fee":  {"asset": t.get("commissionAsset"), "amount": float(t.get("commission", 0.0))}
+                   if t.get("commissionAsset") else None
         })
+
     for c in conversions:
         events.append({
-            "type": "conversion",
-            "fromAsset": c["fromAsset"],
-            "toAsset": c["toAsset"],
-            "fromAmount": c["fromAmount"],
-            "toAmount": c["toAmount"],
-            "time": c["time"]
+            "time": c["time"],
+            "from": {"asset": c["fromAsset"], "amount": c["fromAmount"]},
+            "to":   {"asset": c["toAsset"],   "amount": c["toAmount"]},
+            "fee":  None
         })
-    events.sort(key=lambda x: x["time"])
 
-    # Parcours des événements pour mettre à jour le portefeuille
+    events.sort(key=lambda ev: ev["time"])
+
+    # 6. Boucle unifiée d'application des échanges
     for ev in events:
-        if ev["type"] == "trade":
-            is_buy = ev["isBuyer"]
-            qty = ev["qty"]
-            quote_qty = ev["quoteQty"]
-            fee = ev.get("commission", 0.0)
-            fee_asset = ev.get("commissionAsset")
-            if is_buy:
-                # Achat: on achète base_asset en dépensant quote_asset
-                base_asset, quote_asset = ev["symbol"][:-len(base_currency)], base_currency
-                spent_asset = quote_asset
-                received_asset = base_asset
-                spent_amount = quote_qty
-                received_amount = qty
-            else:
-                # Vente: on vend base_asset pour obtenir quote_asset
-                base_asset, quote_asset = ev["symbol"][:-len(base_currency)], base_currency
-                spent_asset = base_asset
-                received_asset = quote_asset
-                spent_amount = qty
-                received_amount = quote_qty
-            # Ajuster pour les frais
-            if fee_asset == spent_asset:
-                spent_amount += fee
-            if fee_asset == received_asset:
-                received_amount -= fee
-            # Calcul du coût de l'actif dépensé
-            if is_buy and spent_asset in base_assets:
-                cost_spent_total = spent_amount
-            else:
-                avg_cost_spent = 0.0
-                if portfolio.get(spent_asset, 0) > 0:
-                    total_cost = cost_basis.get(spent_asset, 0.0)
-                    total_qty = portfolio.get(spent_asset, 0.0)
-                    if total_qty > 0:
-                        avg_cost_spent = total_cost / total_qty
-                cost_spent_total = avg_cost_spent * spent_amount
-            # Mettre à jour le portefeuille
-            remove_holding(spent_asset, spent_amount, cost_spent_total)
-            if received_asset in base_assets:
-                # On reçoit une stable : on réalise le profit
-                net_received = received_amount
-                profit = net_received - cost_spent_total
-                realized_profit += profit
-                realized_by_asset[spent_asset] = realized_by_asset.get(spent_asset, 0.0) + profit
-                add_holding(received_asset, net_received, cost_spent_total)
-            else:
-                # On reçoit une crypto : reporter le coût
-                add_holding(received_asset, received_amount, cost_spent_total)
-            # Frais en BNB ou autre
-            if fee_asset and fee_asset not in [spent_asset, received_asset]:
-                fee_amount = fee
-                avg_cost_fee = 0.0
-                if portfolio.get(fee_asset, 0.0) > 0:
-                    avg_cost_fee = cost_basis.get(fee_asset, 0.0) / portfolio.get(fee_asset, 0.0)
-                cost_fee_total = avg_cost_fee * fee_amount
-                remove_holding(fee_asset, fee_amount, cost_fee_total)
-                realized_profit -= cost_fee_total
-                realized_by_asset[fee_asset] = realized_by_asset.get(fee_asset, 0.0) - cost_fee_total
+        frm_a = ev["from"]["asset"]
+        frm_q = ev["from"]["amount"]
+        to_a  = ev["to"]["asset"]
+        to_q  = ev["to"]["amount"]
+        fee   = ev["fee"]
 
-        elif ev["type"] == "conversion":
-            from_asset = ev["fromAsset"]
-            to_asset = ev["toAsset"]
-            from_amount = ev["fromAmount"]
-            to_amount = ev["toAmount"]
-            # Calcul du coût moyen de l'actif source
-            avg_cost_from = 0.0
-            if portfolio.get(from_asset, 0.0) > 0:
-                total_cost_from = cost_basis.get(from_asset, 0.0)
-                total_qty_from = portfolio.get(from_asset, 0.0)
-                if total_qty_from > 0:
-                    avg_cost_from = total_cost_from / total_qty_from
-            cost_spent_total = avg_cost_from * from_amount
-            remove_holding(from_asset, from_amount, cost_spent_total)
-            if to_asset in base_assets:
-                net_received = to_amount
-                profit = net_received - cost_spent_total
-                realized_profit += profit
-                realized_by_asset[from_asset] = realized_by_asset.get(from_asset, 0.0) + profit
-                add_holding(to_asset, net_received, cost_spent_total)
-            else:
-                add_holding(to_asset, to_amount, cost_spent_total)
-            # Pas de frais distincts pour Binance Convert généralement
+        # 🔸 Calcul du coût du from_asset
+        if frm_a in base_assets:
+            cost_spent = frm_q
+        else:
+            total_q = portfolio.get(frm_a, 0.0)
+            total_c = cost_basis.get(frm_a, 0.0)
+            avg     = (total_c / total_q) if total_q > 0 else 0.0
+            cost_spent = avg * frm_q
+
+        # 🔸 Retrait de l'actif dépensé
+        remove_holding(frm_a, frm_q, cost_spent)
+
+        # 🔸 Réception de to_asset
+        if to_a in base_assets:
+            profit = to_q - cost_spent
+            realized_profit += profit
+            realized_by_asset[frm_a] = realized_by_asset.get(frm_a, 0.0) + profit
+            add_holding(to_a, to_q, cost_spent)
+        else:
+            add_holding(to_a, to_q, cost_spent)
+
+        # 🔸 Gestion des frais, si un fee asset différent
+        if fee and fee["asset"] not in [frm_a, to_a]:
+            f_a = fee["asset"]
+            f_q = float(fee["amount"])
+            total_q = portfolio.get(f_a, 0.0)
+            total_c = cost_basis.get(f_a, 0.0)
+            avg_f   = (total_c / total_q) if total_q > 0 else 0.0
+            cost_fee = avg_f * f_q
+
+            remove_holding(f_a, f_q, cost_fee)
+            realized_profit -= cost_fee
+            realized_by_asset[f_a] = realized_by_asset.get(f_a, 0.0) - cost_fee
 
     # 3. Calcul de la valeur actuelle et P/L latent
     current_value = 0.0
@@ -414,14 +373,13 @@ def sync_data() -> dict:
     # Rassemblement des résultats
     portfolio_data = {
         "valeur_actuelle": current_value,
+        "solde_usdc": usdc_balance,
         "capital_investi": invested_capital,
         "pl_realise": realized_profit,
         "pl_latent": unrealized_profit,
         "open_positions": open_positions,
         "closed_positions": closed_positions
     }
-    # Ajout du solde USDC réel
-    portfolio_data["solde_usdc"] = usdc_balance
 
     raw_data = {
         "deposits": deposits,
