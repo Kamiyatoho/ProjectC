@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="p-6">
+    <h1 class="text-2xl font-bold mb-6" data-aos="fade-down">Fiscalité Crypto</h1>
+
+    <!-- Choix de l'année -->
+    <div class="mb-6" data-aos="fade-up">
+        <label for="yearSelect" class="block text-gray-300 mb-2">Sélectionnez l'année :</label>
+        <select id="yearSelect" class="w-32 bg-gray-700 text-white p-2 rounded">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <!-- Cartes de stats -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in">
+            <h2 class="text-sm text-gray-400">Montant investi en <span id="displayYear">{{ current_year }}</span></h2>
+            <p class="text-xl font-semibold mt-2"><span id="investedAmount">0</span> USDC</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in" data-aos-delay="100">
+            <h2 class="text-sm text-gray-400">Capital non imposable</h2>
+            <p class="text-xl font-semibold mt-2"><span id="nonTaxable">0</span> USDC</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in" data-aos-delay="200">
+            <h2 class="text-sm text-gray-400">Valeur actuelle du portefeuille</h2>
+            <p class="text-xl font-semibold mt-2"><span id="currentValue">0</span> USDC</p>
+        </div>
+        <div class="bg-gray-800 p-4 rounded shadow" data-aos="zoom-in" data-aos-delay="300">
+            <h2 class="text-sm text-gray-400">Impôt estimé</h2>
+            <p class="text-xl font-semibold mt-2"><span id="taxAmount">0</span> USDC</p>
+        </div>
+    </div>
+
+    <!-- Graphique -->
+    <div class="bg-gray-800 p-6 rounded shadow" data-aos="fade-up">
+        <h2 class="text-lg font-semibold mb-4">Dépôts et retraits par mois</h2>
+        <canvas id="depositWithdrawChart" height="100"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('depositWithdrawChart').getContext('2d');
+        let chart;
+
+        function updateData(year) {
+            fetch(`/api/taxes?year=${year}`)
+                .then(res => res.json())
+                .then(data => {
+                    // Met à jour les chiffres
+                    document.getElementById('displayYear').textContent = year;
+                    document.getElementById('investedAmount').textContent = data.totalDeposit;
+                    document.getElementById('nonTaxable').textContent = data.nonTaxable;
+                    document.getElementById('currentValue').textContent = data.currentValue;
+                    document.getElementById('taxAmount').textContent = data.tax;
+
+                    // Met à jour le graphique
+                    const labels = data.months;
+                    const deposits = data.deposits;
+                    const withdrawals = data.withdrawals;
+
+                    if (chart) {
+                        chart.data.labels = labels;
+                        chart.data.datasets[0].data = deposits;
+                        chart.data.datasets[1].data = withdrawals;
+                        chart.update();
+                    } else {
+                        chart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels,
+                                datasets: [
+                                    { label: 'Dépôts', data: deposits, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
+                                    { label: 'Retraits', data: withdrawals, backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+                                ]
+                            },
+                            options: { responsive: true, scales: { y: { beginAtZero: true } } }
+                        });
+                    }
+                });
+        }
+
+        // Événement changement d'année
+        document.getElementById('yearSelect')
+            .addEventListener('change', e => updateData(e.target.value));
+
+        // Chargement initial
+        updateData({{ current_year }});
+    });
+</script>
+{% endblock %}
