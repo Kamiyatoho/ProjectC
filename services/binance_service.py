@@ -240,35 +240,48 @@ def sync_data() -> dict:
 
     # Traitement des dépôts (capital investi)
     for dep in deposits:
-        asset = dep["asset"]
-        amount = dep["amount"]
-        timestamp = dep["time"]
-        if asset in base_assets:
-            # Stablecoin : coût 1:1
+        asset, amount, ts = dep["asset"], dep["amount"], dep["time"]
+        if asset in ["USDC", "BUSD"]:
+            # stables 1:1
             add_holding(asset, amount, amount)
             invested_capital += amount
+
+        elif asset == "EUR":
+            # récupérer le cours EURUSDC au timestamp
+            price = get_price_at("EUR", ts, base_currency="USDC")
+            cost = price * amount
+            # on ajoute un solde USDC, pas un solde EUR
+            add_holding("USDC", cost, cost)
+            invested_capital += cost
+
         else:
-            # Crypto-dépôt : récupérer le prix au moment du dépôt
-            price_at_deposit = get_price_at(asset, timestamp)
-            cost = price_at_deposit * amount
+            # crypto classique
+            price = get_price_at(asset, ts)
+            cost = price * amount
             add_holding(asset, amount, cost)
-            # On ajoute le coût du dépôt crypto au capital investi
             invested_capital += cost
     # Traitement des retraits (capital investi)
     for w in withdrawals:
-        asset = w["asset"]
-        amount = w["amount"]
-        timestamp = w["time"]
-        if asset in base_assets:
-            # Stablecoin : coût 1:1
+        asset, amount, ts = w["asset"], w["amount"], w["time"]
+
+        if asset in ["USDC", "BUSD"]:
+            # Stablecoins 1:1
             remove_holding(asset, amount, amount)
             invested_capital -= amount
+
+        elif asset == "EUR":
+            # On convertit d’abord l’EUR en USDC au taux historique
+            price = get_price_at("EUR", ts, base_currency="USDC")
+            cost = price * amount
+            # On retire du solde USDC (pas de solde EUR conservé)
+            remove_holding("USDC", cost, cost)
+            invested_capital -= cost
+
         else:
-            # Crypto-retrait : récupérer le prix au moment du retrait
-            price_at_withdrawal = get_price_at(asset, timestamp)
-            cost = price_at_withdrawal * amount
+            # Crypto classique : on récupère le prix spot au moment du retrait
+            price = get_price_at(asset, ts)
+            cost = price * amount
             remove_holding(asset, amount, cost)
-            # On soustrait le coût du retrait crypto du capital investi
             invested_capital -= cost
 
     # Combiner trades et conversions chronologiquement
@@ -435,7 +448,7 @@ def sync_data() -> dict:
     # Rassemblement des résultats
     portfolio_data = {
         "valeur_actuelle": current_value,
-        "capital_investi": invested_capital,
+        "capital_investi": invested_capital - usdc_balance,
         "pl_realise": realized_profit,
         "pl_latent": unrealized_profit,
         "open_positions": open_positions,
