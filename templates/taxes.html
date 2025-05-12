@@ -66,74 +66,107 @@
     document.addEventListener('DOMContentLoaded', function() {
         const ctx = document.getElementById('depositWithdrawChart').getContext('2d');
         let chart;
+        let pending = null;
 
+        // mapping mois
+        const monthNames = {
+            "01":"Janvier","02":"Février","03":"Mars",
+            "04":"Avril","05":"Mai","06":"Juin",
+            "07":"Juillet","08":"Août","09":"Septembre",
+            "10":"Octobre","11":"Novembre","12":"Décembre"
+        };
+
+        // rendu effectif du chart
         function renderChart(labels, deposits, withdrawals) {
             chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels,
                     datasets: [
-                        { label: 'Dépôts', data: deposits, backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                        { label: 'Retraits', data: withdrawals, backgroundColor: 'rgba(255, 99, 132, 0.7)' }
+                        { label: 'Dépôts',    data: deposits,    backgroundColor: '#60A5FA' },
+                        { label: 'Retraits',  data: withdrawals, backgroundColor: '#F87171' }
                     ]
                 },
                 options: {
                     responsive: true,
                     animation: { duration: 1000, easing: 'easeOutQuart' },
-                    scales: { y: { beginAtZero: true } }
+                    scales: {
+                        x: { ticks:{ color:'#fff' }, grid:{ color:'rgba(255,255,255,0.1)' } },
+                        y: { beginAtZero:true, ticks:{ color:'#fff' }, grid:{ color:'rgba(255,255,255,0.1)' } }
+                    },
+                    plugins: {
+                        legend: { labels:{ color:'#fff' } },
+                        tooltip: {
+                            titleColor: '#fff',
+                            bodyColor:  '#fff',
+                            backgroundColor: 'rgba(0,0,0,0.7)'
+                        }
+                    }
                 }
             });
+        }
+
+        // instancie un Observer pour déclencher renderChart au bon moment
+        function observeChart() {
+            const canvas = document.getElementById('depositWithdrawChart');
+            if (!canvas || chart) return;
+            const io = new IntersectionObserver((entries, obs) => {
+                entries.forEach(e => {
+                    if (e.isIntersecting && pending) {
+                        // on mappe les labels puis on dessine
+                        const labels = pending.rawLabels.map(m => monthNames[m] || m);
+                        renderChart(labels, pending.deposits, pending.withdrawals);
+                        obs.unobserve(canvas);
+                    }
+                });
+            }, { threshold: 0.5 });
+            io.observe(canvas);
         }
 
         function updateData(year) {
             fetch(`/api/taxes?year=${year}`)
                 .then(res => res.json())
                 .then(data => {
-                    // Mise à jour des années
-                    document.getElementById('displayYear').textContent = year;
+                    // mise à jour des cartes (inchangée)
+                    document.getElementById('displayYear').textContent  = year;
                     document.getElementById('displayYear2').textContent = year;
                     document.getElementById('displayYear3').textContent = year;
-
-                    const totalDeposit = parseFloat(data.totalDeposit);
-                    const totalWithdrawal = data.withdrawals.reduce((sum, v) => sum + v, 0);
-                    const currentValue = parseFloat(data.currentValue);
-                    const taxValue = parseFloat(data.tax);
-
-                    // Animation des chiffres
-                    animateValue('investedAmount', 0, totalDeposit, 1000);
-                    animateValue('withdrawalAmount', 0, totalWithdrawal, 1500);
-                    animateValue('currentValue', 0, currentValue, 2000);
-                    animateValue('taxAmount', 0, taxValue, 3000);
-
-                    // Note imposable si applicable
-                    const noteEl = document.getElementById('imposableNote');
-                    const excess = totalWithdrawal - totalDeposit;
-                    if (excess > 0) {
+                    const td = parseFloat(data.totalDeposit);
+                    const tw = data.withdrawals.reduce((s,v)=>s+v,0);
+                    const cv = parseFloat(data.currentValue);
+                    const tx = parseFloat(data.tax);
+                    animateValue('investedAmount',   0, td, 1000);
+                    animateValue('withdrawalAmount', 0, tw, 1500);
+                    animateValue('currentValue',     0, cv, 2000);
+                    animateValue('taxAmount',        0, tx, 3000);
+                    const noteEl = document.getElementById('imposableNote'),
+                        excess = tw - td;
+                    if (excess>0) {
                         noteEl.textContent = `(dont ${excess.toFixed(2)} USDC imposable)`;
                         noteEl.classList.remove('hidden');
-                    } else {
-                        noteEl.classList.add('hidden');
-                    }
+                    } else noteEl.classList.add('hidden');
 
-                    // Graphique
-                    const labels = data.months;
-                    const deposits = data.deposits;
+                    // préparation données chart
+                    const rawLabels   = data.months;
+                    const deposits    = data.deposits;
                     const withdrawals = data.withdrawals;
 
                     if (chart) {
-                        chart.data.labels = labels;
+                        // si déjà créé, on met à jour immédiatement
+                        chart.data.labels = rawLabels.map(m=>monthNames[m]||m);
                         chart.data.datasets[0].data = deposits;
                         chart.data.datasets[1].data = withdrawals;
                         chart.update();
                     } else {
-                        renderChart(labels, deposits, withdrawals);
+                        // sinon, on stocke et on attend le scroll
+                        pending = { rawLabels, deposits, withdrawals };
+                        observeChart();
                     }
                 });
         }
 
         // Événement changement d'année
         document.getElementById('yearSelect').addEventListener('change', e => updateData(e.target.value));
-
         // Chargement initial
         updateData({{ current_year }});
     });

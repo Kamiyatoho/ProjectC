@@ -69,8 +69,66 @@
     </table>
 </div>
 {% else %}
+
 <p class="text-gray-400 mb-8">Aucune position ouverte.</p>
 {% endif %}
+<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Répartition & Performance</h2>
+<div class="flex flex-col lg:flex-row items-center justify-center space-y-6 lg:space-y-0 lg:space-x-6 mb-8" data-aos="fade-up">
+
+    <!-- Pie chart : valeur actuelle -->
+    <div class="w-full lg:w-1/3">
+        <h3
+                class="text-lg font-semibold mb-2 text-gray-300"
+                data-aos="fade-down"
+                data-aos-duration="800"
+                data-aos-offset="120"
+        >Répartition valeur actuelle</h3>
+        <div
+                class="bg-gray-800 p-4 rounded h-64"
+                data-aos="zoom-in"
+                data-aos-duration="1000"
+                data-aos-offset="120"
+        >
+            <canvas id="assetPieChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Bar chart : performance en % -->
+    <div class="w-full lg:w-1/3">
+        <h3
+                class="text-lg font-semibold mb-2 text-gray-300"
+                data-aos="fade-down"
+                data-aos-duration="800"
+                data-aos-offset="120"
+        >Performances des positions ouvertes</h3>
+        <div
+                class="bg-gray-800 p-4 rounded h-64"
+                data-aos="zoom-in"
+                data-aos-duration="1000"
+                data-aos-offset="120"
+        >
+            <canvas id="performanceBarChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Pie chart : valeur moyenne -->
+    <div class="w-full lg:w-1/3">
+        <h3
+                class="text-lg font-semibold mb-2 text-gray-300"
+                data-aos="fade-down"
+                data-aos-duration="800"
+                data-aos-offset="120"
+        >Répartition valeur investie</h3>
+        <div
+                class="bg-gray-800 p-4 rounded h-64"
+                data-aos="zoom-in"
+                data-aos-duration="1000"
+                data-aos-offset="120"
+        >
+            <canvas id="avgPricePieChart"></canvas>
+        </div>
+    </div>
+</div>
 
 <!-- Positions fermées -->
 <h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Positions Fermées</h2>
@@ -95,12 +153,6 @@
         </tbody>
     </table>
 </div>
-<h2 class="text-xl font-semibold mb-3" data-aos="fade-right">Répartition des Positions Ouvertes</h2>
-<div class="bg-gray-800 p-4 rounded mb-8" style="max-width:600px; margin:0 auto; height:600px;" data-aos="fade-up" data-aos-delay="50">
-    <canvas id="assetPieChart"></canvas>
-</div>
-{% else %}
-<p class="text-gray-400">Aucune position fermée pour le moment.</p>
 {% endif %}
 {% endif %}
 
@@ -125,45 +177,149 @@
 
 <script>
     $(document).ready(function() {
-        // Préparation des données
-        const chartLabels = [{% for pos in data.open_positions %}"{{ pos.asset }}"{% if not loop.last %}, {% endif %}{% endfor %}];
-        const chartData = [{% for pos in data.open_positions %}{{ (pos.quantity * pos.current_price) | round(2) }}{% if not loop.last %}, {% endif %}{% endfor %}];
+        // 1) données brutes
+        const labels0       = [{% for pos in data.open_positions %}"{{ pos.asset }}"{% if not loop.last %}, {% endif %}{% endfor %}];
+        const currentValues = [{% for pos in data.open_positions %}{{ (pos.quantity * pos.current_price)|round(2) }}{% if not loop.last %}, {% endif %}{% endfor %}];
+        const avgValues     = [{% for pos in data.open_positions %}{{ (pos.quantity * pos.avg_price)  |round(2) }}{% if not loop.last %}, {% endif %}{% endfor %}];
+        const perfValues    = [{% for pos in data.open_positions %}
+        {% set base = (pos.quantity * pos.avg_price) %}
+        {{ ((pos.quantity * pos.current_price - base) / base * 100)|round(2) }}{% if not loop.last %}, {% endif %}
+        {% endfor %}];
 
-        // Initialisation du camembert (seulement si l'élément existe)
-        const chartCanvas = document.getElementById('assetPieChart');
-        if (chartCanvas) {
-            const ctx = chartCanvas.getContext('2d');
-            new Chart(ctx, {
+        // 2) calcul “Total”
+        const totalAvg     = avgValues.reduce((s,v) => s + v, 0);
+        const totalCurrent = currentValues.reduce((s,v) => s + v, 0);
+        const totalPerf    = totalAvg > 0
+            ? parseFloat((((totalCurrent - totalAvg) / totalAvg) * 100).toFixed(2))
+            : 0;
+
+        // 3) helper pour filtrer et ajouter “Autres”
+        function groupOthers(labels, data) {
+            const total = data.reduce((s,v) => s + v, 0);
+            const lbls  = [], vals = [];
+            let other  = 0;
+            data.forEach((v,i) => {
+                if (v / total < 0.10) other += v;
+                else {
+                    lbls.push(labels[i]);
+                    vals.push(v);
+                }
+            });
+            if (other > 0) {
+                lbls.push('Autres');
+                vals.push(parseFloat(other.toFixed(2)));
+            }
+            return { labels: lbls, data: vals };
+        }
+
+        // 4) fonctions d'init
+        let chartA, chartB, chartC;
+
+        function initAssetPieChart(){
+            if (chartA) return;
+            const out = groupOthers(labels0, currentValues);
+            const ctx = document.getElementById('assetPieChart').getContext('2d');
+            chartA = new Chart(ctx, {
                 type: 'pie',
-                data: {
-                    labels: chartLabels,
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: ['#4F46E5', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5CF6']
-                    }]
-                },
+                data: { labels: out.labels, datasets:[{ data: out.data }] },
                 options: {
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: { color: '#ddd' }
-                        },
-                        datalabels: {
-                            formatter: (value, ctx) => {
-                                const total = ctx.chart.data.datasets[0].data.reduce((sum, v) => sum + v, 0);
-                                return total > 0 ? Math.round(value / total * 100) + '%' : '';
+                    animation: { duration: 1500 },
+                    maintainAspectRatio:false,
+                    plugins:{
+                        legend:{ position:'bottom', labels:{ color:'#fff' } },
+                        datalabels:{
+                            formatter:(v,ctx)=>{
+                                const t = ctx.chart.data.datasets[0].data.reduce((s,x)=>s+x,0);
+                                return t>0?Math.round(v/t*100)+'%':'';
                             },
-                            color: '#fff',
-                            font: { weight: 'bold', size: 12 }
+                            color:'#fff', font:{ weight:'bold', size:12 }
                         }
                     }
                 },
-                plugins: [ChartDataLabels]
+                plugins:[ChartDataLabels]
             });
         }
 
+        function initPerfBarChart(){
+            if (chartB) return;
+            // on ajoute 'Total' en fin
+            const labels = labels0.concat('Total');
+            const data   = perfValues.concat(totalPerf);
+            const ctx    = document.getElementById('performanceBarChart').getContext('2d');
+            chartB = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Performance (%)',
+                        data,
+                        backgroundColor: '#60A5FA'
+                    }]
+                },
+                options: {
+                    animation: { duration:1500 },
+                    maintainAspectRatio:false,
+                    scales: {
+                        x:{ ticks:{ color:'#fff' }, grid:{ color:'rgba(255,255,255,0.1)' } },
+                        y:{
+                            beginAtZero:true,
+                            ticks:{ callback:v=>v+'%', color:'#fff' },
+                            grid:{ color:'rgba(255,255,255,0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend:{ display:false },
+                        datalabels:{ anchor:'end', align:'top', color:'#fff', formatter:v=>v+'%' },
+                        tooltip:{ titleColor:'#fff', bodyColor:'#fff', backgroundColor:'rgba(0,0,0,0.7)' }
+                    }
+                },
+                plugins:[ChartDataLabels]
+            });
+        }
+
+        function initAvgPieChart(){
+            if (chartC) return;
+            const out = groupOthers(labels0, avgValues);
+            const ctx = document.getElementById('avgPricePieChart').getContext('2d');
+            chartC = new Chart(ctx, {
+                type:'pie',
+                data:{ labels: out.labels, datasets:[{ data: out.data }] },
+                options:{
+                    animation:{ duration:1500 },
+                    maintainAspectRatio:false,
+                    plugins:{
+                        legend:{ position:'bottom', labels:{ color:'#fff' } },
+                        datalabels:{
+                            formatter:(v,ctx)=>{
+                                const t = ctx.chart.data.datasets[0].data.reduce((s,x)=>s+x,0);
+                                return t>0?Math.round(v/t*100)+'%':'';
+                            },
+                            color:'#fff', font:{ weight:'bold', size:12 }
+                        }
+                    }
+                },
+                plugins:[ChartDataLabels]
+            });
+        }
+
+        // 5) IntersectionObserver pour lancer à l'affichage
+        const obs = new IntersectionObserver((ents, o) => {
+            ents.forEach(e => {
+                if (!e.isIntersecting) return;
+                switch(e.target.id){
+                    case 'assetPieChart':            initAssetPieChart(); break;
+                    case 'performanceBarChart':      initPerfBarChart(); break;
+                    case 'avgPricePieChart':         initAvgPieChart(); break;
+                }
+                o.unobserve(e.target);
+            });
+        }, { threshold: 0.5 });
+
+        ['assetPieChart','performanceBarChart','avgPricePieChart']
+            .forEach(id => {
+                const el = document.getElementById(id);
+                if (el) obs.observe(el);
+            });
         // Initialisation DataTable avec boutons et recherche alignée
         ['#open-positions-table', '#closed-positions-table'].forEach(function(selector) {
             if (!$.fn.DataTable.isDataTable(selector)) {
