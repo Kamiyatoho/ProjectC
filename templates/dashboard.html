@@ -257,24 +257,35 @@
                     }]
                 },
                 options: {
-                    animation: { duration:1500 },
-                    maintainAspectRatio:false,
-                    scales: {
-                        x:{ ticks:{ color:'#fff' }, grid:{ color:'rgba(255,255,255,0.1)' } },
-                        y:{
-                            beginAtZero:true,
-                            ticks:{ callback:v=>v+'%', color:'#fff' },
-                            grid:{ color:'rgba(255,255,255,0.1)' }
-                        }
-                    },
-                    plugins: {
-                        legend:{ display:false },
-                        datalabels:{ anchor:'end', align:'top', color:'#fff', formatter:v=>v+'%' },
-                        tooltip:{ titleColor:'#fff', bodyColor:'#fff', backgroundColor:'rgba(0,0,0,0.7)' }
-                    }
-                },
-                plugins:[ChartDataLabels]
-            });
+                 animation: { duration:1500 },
+                 layout: {
+                       padding: {
+                             top: 20     // ajoute un espace en haut pour les labels
+                           }
+                     },
+            maintainAspectRatio:false,
+                scales: {
+                x:{ ticks:{ color:'#fff' }, grid:{ color:'rgba(255,255,255,0.1)' } },
+                y:{
+                    beginAtZero:true,
+                        ticks:{ callback:v=>v+'%', color:'#fff' },
+                    grid:{ color:'rgba(255,255,255,0.1)' }
+                }
+            },
+            plugins: {
+                legend:{ display:false },
+                       datalabels:{
+                             anchor: 'end',
+                                 align: 'top',
+                                 clip: false,        // <--- autorise le label en dehors du chartArea
+                                 color: '#fff',
+                                 formatter: v => v + '%'
+                               },
+                tooltip:{ titleColor:'#fff', bodyColor:'#fff', backgroundColor:'rgba(0,0,0,0.7)' }
+            }
+        },
+            plugins:[ChartDataLabels]
+        });
         }
 
         function initAvgPieChart(){
